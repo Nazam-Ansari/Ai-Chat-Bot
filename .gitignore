@@ -1,1 +1,53 @@
-README.md
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.pdb
+*.exe
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Publish / deployment artifacts
+publish/
+PublishProfiles/
+ServiceDependencies/
+*.pubxml
+*.pubxml.user
+*.publishsettings
+*.azurePubxml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Secrets & local config
+appsettings.*.local.json
+secrets.json
+*.env
+.env
+.env.*
+
+# Logs & temp
+*.log
+logs/
+*.tmp
+*.cache
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code review / local tooling
+.cr/

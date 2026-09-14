@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.SignalR;
 using RealtimeChatDemo.Hubs;
 
