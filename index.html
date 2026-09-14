@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Real-Time Backend Demo — Nazam Ali</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 24px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.sub { color: #94a3b8; margin-top: 0; font-size: 14px; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+  .dot.on { background: #22c55e; }
+  #log {
+    height: 260px;
+    overflow-y: auto;
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .msg { margin-bottom: 6px; }
+  .msg .who { color: #38bdf8; font-weight: 600; }
+  .msg .time { color: #64748b; font-size: 11px; margin-left: 6px; }
+  .notif { color: #fbbf24; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  input, button {
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    padding: 10px;
+  }
+  input {
+    flex: 1;
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  button {
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #0ea5e9; }
+  button.secondary {
+    background: transparent;
+    color: #fbbf24;
+    border: 1px solid #fbbf24;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Real-Time Backend Demo</h1>
+  <p class="sub">
+    ASP.NET Core + SignalR — open this page in two browser tabs (or two devices)
+    to see messages and notifications sync instantly, with no page refresh.
+  </p>
+
+  <div class="card">
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="userName" placeholder="Your name" value="Guest" />
+      <button onclick="register()">Join room</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="log"></div>
+    <div class="row">
+      <input id="messageInput" placeholder="Type a message and hit Enter" onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+    <div class="row">
+      <button class="secondary" style="flex:1" onclick="sendNotification()">
+        Simulate server notification (e.g. "New order received")
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const room = "demo-room";
+  const log = document.getElementById("log");
+  const statusDot = document.getElementById("statusDot");
+  const statusText = document.getElementById("statusText");
+
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/hubs/chat")
+    .withAutomaticReconnect()
+    .build();
+
+  function addLine(html) {
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerHTML = html;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  connection.on("ReceiveMessage", (user, message, time) => {
+    addLine(`<span class="who">${user}</span> ${message} <span class="time">${time}</span>`);
+  });
+
+  connection.on("ReceiveNotification", (title, body, time) => {
+    addLine(`<span class="notif">🔔 ${title}: ${body}</span> <span class="time">${time}</span>`);
+  });
+
+  connection.on("UserJoined", (user, time) => {
+    addLine(`<span class="time">${user} joined at ${time}</span>`);
+  });
+
+  connection.start()
+    .then(() => {
+      statusDot.classList.add("on");
+      statusText.textContent = "Connected";
+    })
+    .catch(err => {
+      statusText.textContent = "Connection failed: " + err;
+    });
+
+  function register() {
+    const userName = document.getElementById("userName").value || "Guest";
+    connection.invoke("Register", userName, room);
+  }
+
+  function sendMessage() {
+    const userName = document.getElementById("userName").value || "Guest";
+    const input = document.getElementById("messageInput");
+    if (!input.value.trim()) return;
+    connection.invoke("SendMessage", room, userName, input.value);
+    input.value = "";
+  }
+
+  function sendNotification() {
+    // Calls the REST endpoint, which pushes via SignalR to every open tab -
+    // this is the pattern for "an API action triggers a live UI update".
+    fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        room: room,
+        title: "New Order Received",
+        body: "Order #" + Math.floor(Math.random() * 9000 + 1000) + " - $" + (Math.random() * 80 + 20).toFixed(2)
+      })
+    });
+  }
+</script>
+</body>
+</html>
